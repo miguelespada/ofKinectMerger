@@ -1,0 +1,26 @@
+<controls>
+    <SliderFloat_Zoom>
+        <name>Zoom</name>
+        <value>0</value>
+    </SliderFloat_Zoom>
+    <SliderFloat_camPosX>
+        <name>camPosX</name>
+        <value>0</value>
+    </SliderFloat_camPosX>
+    <SliderFloat_camPosY>
+        <name>camPosY</name>
+        <value>0</value>
+    </SliderFloat_camPosY>
+    <SliderFloat_camRotX>
+        <name>camRotX</name>
+        <value>0</value>
+    </SliderFloat_camRotX>
+    <SliderFloat_camRotY>
+        <name>camRotY</name>
+        <value>0</value>
+    </SliderFloat_camRotY>
+    <Toggle_Info>
+        <name>Info</name>
+        <value>0</value>
+    </Toggle_Info>
+</controls>
