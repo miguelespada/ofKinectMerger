@@ -2,7 +2,7 @@
 
 #include "ofMain.h"
 #include "calibratorModeCalibrate.h"
-#include "calibratorModeSnapshot.h"
+
 
 class testApp : public ofBaseApp{
   public:
@@ -21,9 +21,6 @@ class testApp : public ofBaseApp{
     void gotMessage(ofMessage msg);
 
     ofCamera cam;
-    bool bInfo;
-    calibratorMode *mode;
-    calibratorModeCalibrate calibrate;
-    calibratorModeSnapshot snapshot;
+    calibratorModeCalibrate *mode;
 
 };

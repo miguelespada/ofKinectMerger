@@ -8,6 +8,7 @@
 #include "ofMain.h"
 #include <iostream>
 #include <fstream>
+#include "ofxTimeMeasurements.h"
 
 #ifndef kinectCalibrator_kinectData_h
 #define kinectCalibrator_kinectData_h
@@ -18,28 +19,42 @@ class kinectData{
     ofMesh points;
     public:
     void load(string fileName, ofMatrix4x4 M){
+        TIME_SAMPLE_START("read");
         points.clear();
         string line;
-        
+        bool bParsing = false;
+        int propertyCount = 0;
         ifstream file (fileName.c_str());
         if (file.is_open())
         {
             while ( file.good() )
             {
                 getline (file,line);
-                vector<string> result = ofSplitString(line, " ");
-                if(result.size() > 0){
-                    if(!result[0].compare("v")){
-                        if(result.size() == 4){ //Standar obj f¡le
-                            ofVec3f p (ofToFloat(result[1]), ofToFloat(result[2]), ofToFloat(result[3]));
-                            points.addVertex(M.postMult(p));
-                        }
-                        if(result.size() == 5){ //Enriched obj file
-                            ofVec3f p (ofToFloat(result[2]), ofToFloat(result[3]), ofToFloat(result[4]));
-                            points.addVertex(M.postMult(p));
-                            
-                        }
+                if(!bParsing){
+                    vector<string> tokens;
+                    tokens = ofSplitString(line, " ");
+                    if(!tokens[0].compare("property")){
+                        propertyCount ++;
+                        continue;
                     }
+                    if(!line.compare("end_header")) {
+                        bParsing = true;
+                        cout << "Start parsing!" << endl;
+                        continue;
+                    }
+                }
+                
+                if(bParsing && propertyCount == 3){
+                    ofVec3f p;
+                    sscanf(line.c_str(), "%f  %f  %f", &p.x, &p.y, &p.z);
+                    points.addVertex(M.postMult(p));
+                }
+                
+                if(bParsing && propertyCount == 4){
+                    ofVec3f p;
+                    int userId;
+                    sscanf(line.c_str(), "%f  %f  %f %d", &p.x, &p.y, &p.z, &userId);
+                    points.addVertex(M.postMult(p));
                 }
             }
             file.close();
@@ -47,21 +62,28 @@ class kinectData{
         }
         
         else {
-            cout << "Unable to open file" << fileName << endl;
+            cout << "Unable to open file: " << fileName << endl;
         }
+        
+        TIME_SAMPLE_STOP("read");
+        TIME_SAMPLE_PRINT("read");
+        
     }
     void draw(){
-        /*
-        ofColor userColors[] = {ofColor(157, 54, 44),
-            ofColor(255, 181, 105),
-            ofColor(155, 196, 128),
-            ofColor(71, 116, 102),
-            ofColor(140, 80, 46)};
-         */
         points.drawVertices();
+    }
+    int getNumVertices(){
+        return points.getNumVertices();
     }
     ofVec3f getCentroid(){
         return points.getCentroid();
+    }
+    void saveVertices(ofstream *o){
+        for(int i = 0; i < points.getNumVertices(); i++){
+            ofPoint p = points.getVertex(i);
+            *o << p.x << "  " << p.y << "  " << p.z << endl;
+        }
+        
     }
 };
 #endif

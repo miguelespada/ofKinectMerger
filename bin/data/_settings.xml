@@ -1,26 +1,54 @@
 <controls>
     <SliderFloat_Zoom>
         <name>Zoom</name>
-        <value>0</value>
+        <value>4860</value>
     </SliderFloat_Zoom>
     <SliderFloat_camPosX>
         <name>camPosX</name>
-        <value>0</value>
+        <value>-264</value>
     </SliderFloat_camPosX>
     <SliderFloat_camPosY>
         <name>camPosY</name>
-        <value>0</value>
+        <value>92</value>
     </SliderFloat_camPosY>
     <SliderFloat_camRotX>
         <name>camRotX</name>
-        <value>0</value>
+        <value>2</value>
     </SliderFloat_camRotX>
     <SliderFloat_camRotY>
         <name>camRotY</name>
-        <value>0</value>
+        <value>1.8</value>
     </SliderFloat_camRotY>
-    <Toggle_Info>
-        <name>Info</name>
+    <Button_Load_MeshLab_File>
+        <name>Load MeshLab File</name>
         <value>0</value>
-    </Toggle_Info>
+    </Button_Load_MeshLab_File>
+    <Button_Load_PLY_sequences>
+        <name>Load PLY sequences</name>
+        <value>0</value>
+    </Button_Load_PLY_sequences>
+    <Button_Swap_matrix>
+        <name>Swap matrix</name>
+        <value>0</value>
+    </Button_Swap_matrix>
+    <Button_Simulation/MeshLab>
+        <name>Simulation/MeshLab</name>
+        <value>0</value>
+    </Button_Simulation/MeshLab>
+    <Toggle_Auto_merge>
+        <name>Auto merge</name>
+        <value>1</value>
+    </Toggle_Auto_merge>
+    <Toggle_Auto_play>
+        <name>Auto play</name>
+        <value>0</value>
+    </Toggle_Auto_play>
+    <Button_Next_Frame>
+        <name>Next Frame</name>
+        <value>0</value>
+    </Button_Next_Frame>
+    <Button_Prev_Frame>
+        <name>Prev Frame</name>
+        <value>0</value>
+    </Button_Prev_Frame>
 </controls>

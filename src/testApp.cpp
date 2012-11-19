@@ -8,6 +8,7 @@ int pMouseX, pMouseY;
 ofVec3f centroid;
 
 ofxSimpleGuiTitle *status;
+bool bLoadMLP, bLoadSeq, bSimulation, bSwap, bNext, bPrev;
 
 void drawAxes(ofVec3f center){
     ofPushMatrix();
@@ -39,42 +40,71 @@ void testApp::setup(){
     ofBackground(0);
     ofSetFrameRate(60);
     
-    mode = &calibrate;
-   // mode = &snapshot;
+    mode = new calibratorModeCalibrate();
     mode->setup();
-    
-    
-    status = &gui.addTitle("STATUS");
-    
-    gui.addSlider("Zoom", camZoom, -20000, 10000).setSmoothing(0.9);
-    gui.addSlider("camPosX", camPosX, -10000, 10000).setSmoothing(0.9);;
-    gui.addSlider("camPosY", camPosY, -10000, 10000).setSmoothing(0.9);;
+    gui.setup();
+	gui.addTitle("KINECT MERGER \n[i] hide controls");
+    gui.addSlider("Zoom", camZoom, -5000, 5000).setSmoothing(0.9);
+    gui.addSlider("camPosX", camPosX, -200, 200).setSmoothing(0.9);;
+    gui.addSlider("camPosY", camPosY, -200, 200).setSmoothing(0.9);;
     gui.addSlider("camRotX", camRotX, 0, 360).setSmoothing(0.9);;
     gui.addSlider("camRotY", camRotY, 0, 360).setSmoothing(0.9);;
-    gui.addToggle("Info", bInfo);
-    gui.show();
-    
 
+    status = &gui.addTitle("STATUS");
+    gui.addTitle("CONTROLS").setNewColumn(true);
+    gui.addButton("Load MeshLab File", bLoadMLP);
+    gui.addButton("Load PLY sequences", bLoadSeq);
+    gui.addButton("Swap matrix", bSwap);
+    gui.addButton("Simulation/MeshLab", bSimulation);
+    gui.addToggle   ("Auto merge", mode->bSaving);
+    gui.addToggle("Auto play", mode->bAutoplay);
+    gui.addButton("Next Frame", bNext);
+    gui.addButton("Prev Frame", bPrev);
+    
+	gui.loadFromXML();
+    gui.show();
 }
 
 //--------------------------------------------------------------
 void testApp::update(){
     char msg[1024];
-    
-    mode->continousKeyPress(keys);
 
     mode->getStatus(msg);
     status->setName(msg);
-    status->setSize(400, 120);
+    status->setSize(400, 200);
     mode->update();
+    if(bLoadMLP){
+        bLoadMLP = false;
+        mode->openMLP();
+    }
+    if(bLoadSeq){
+        bLoadSeq = false;
+        mode->openSequenceFolders();
+    }
+    if(bSimulation){
+        bSimulation = false;
+        mode->toggleSimulation();
+    }
+    if(bSwap){
+        bSwap = false;
+        mode->toogleSwapMatrix();
+    }
+    if(bNext){
+        bNext = false;
+        mode->nextFrame();
+    }
+    if(bPrev){
+        bPrev = false;
+        mode->prevFrame();
+    }
   
 }
 
 //--------------------------------------------------------------
 void testApp::draw(){
-    centroid = mode->getCentroid();
+    centroid = ofVec3f(0, 0, 0);
     
-	cam.setPosition(centroid + ofVec3f(0, 0,-5000));
+	cam.setPosition(centroid + ofVec3f(0, 0,-2000));
     cam.lookAt(centroid, ofVec3f(0,1,0));
     cam.setFarClip(50000);
     
@@ -92,15 +122,16 @@ void testApp::draw(){
 
     cam.end();
     
-	if(bInfo) gui.draw();
+    gui.draw();
+    
 }
 
 void testApp::keyPressed(int key){
-    mode->keyPressed(key);
     
     switch (key ) {
         case 'i':
-            bInfo = !bInfo;
+            gui.toggleDraw();
+            break;  
         default:
             break;
     }
@@ -123,14 +154,14 @@ void testApp::mouseMoved(int x, int y){
 
 //--------------------------------------------------------------
 void testApp::mouseDragged(int x, int y, int button){
-    if(keys['1']) camZoom +=  (mouseX - pMouseX);
+    if(keys['1']) camZoom -=  (mouseX - pMouseX) * 3;
     if(keys['2']) {
-        camPosX +=  (mouseX - pMouseX);
-        camPosY +=  (mouseY - pMouseY);
+        camPosX -=  (mouseX - pMouseX) *2;
+        camPosY -=  (mouseY - pMouseY) *2;
     }
     if(keys['3']) {
-        camRotY +=  (mouseX - pMouseX) / 10.;
-        camRotX +=  (mouseY - pMouseY) / 10.;
+        camRotY -=  (mouseX - pMouseX) / 10.;
+        camRotX -=  (mouseY - pMouseY) / 10.;
     }
     
     pMouseX = mouseX;

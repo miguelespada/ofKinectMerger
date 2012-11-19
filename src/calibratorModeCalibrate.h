@@ -9,31 +9,26 @@
 #include <iostream>
 #include "ofMain.h"
 #include "ofxXmlSettings.h"
-#include "calibratorMode.h"
 #include "kinectData.h"
 
-class calibratorModeCalibrate : public calibratorMode {
+#define K 2
+class calibratorModeCalibrate  {
     private:
     
-    kinectData kinect0, kinect1;
-    ofMatrix4x4 M0, M1;
+    kinectData kinect[K];
+    ofMatrix4x4 M[K];
     
     ofxXmlSettings MLP;
     ofxXmlSettings XML;
     
-    string k0File, k1File, matrixFile, path, seq0Folder, seq1Folder;
-    bool bSeq, bAutoplay, bNewFrame;
-    int frame, nFrames;
+    string kFile[K];
+    string seqFolder[K];
+    string matrixFile, path;
+    
     
     ofMatrix4x4 parseMatrix(string s){
-        // If possible, always prefer std::vector to naked array
         std::vector<float> v;
-        
-        // Build an istream that holds the input string
         std::istringstream iss(s);
-        
-        // Iterate over the istream, using >> to grab floats
-        // and push_back to store them in the vector
         std::copy(std::istream_iterator<float>(iss),
                   std::istream_iterator<float>(),
                   std::back_inserter(v));
@@ -51,45 +46,62 @@ class calibratorModeCalibrate : public calibratorMode {
         path = result.getPath();
         path.erase(path.size() - aux.size(), path.size() - 1);
     }
+    
     void getMatrixFile(){
-        
+        string oldMatrixFile = matrixFile;
+        string oldPath = path;
         openFile("MeshLab mlp file", matrixFile, path);
-        
         if(matrixFile.size() > 0){
             XML.setValue("MATRIX_FILE", matrixFile);
             XML.setValue("MATRIX_PATH", path);
             XML.saveFile("xmlSettings.xml");
         }
+        else{
+            matrixFile = oldMatrixFile;
+            oldPath = path;
+        }
     }
+    
     void getSequenceFolder(string &folder, int &numFrames, bool bGetNFrames = false){
         string root;
         string seqPath;
-        openFile("Select sequence 0 _###.obj", root, seqPath);
+        openFile("Select sequence 0 _###.ply", root, seqPath);
         int pos = root.find_last_of('_');
         root.erase(pos + 1, root.size() - pos);
         folder = root;
         if(bGetNFrames){
             ofDirectory dir(seqPath );
-            dir.allowExt("obj");
+            dir.allowExt("ply");
             dir.listDir();
             numFrames = dir.numFiles();
         }
     }
     void openSequenceFiles(){
-        
-        getSequenceFolder(seq0Folder, nFrames, true);
-        frame = 0;
-        getSequenceFolder(seq1Folder, nFrames);
-    
-        if(seq0Folder.size() > 0) XML.setValue("SEQ_0", seq0Folder);
-        if(seq1Folder.size() > 0) XML.setValue("SEQ_1", seq1Folder);
+        for(int i = 0; i < K; i++){
+            string oldSequenceFolder = seqFolder[i];
+            int oldNFrames = nFrames;
+            
+            if(i == 0) getSequenceFolder(seqFolder[i], nFrames, true);
+            else getSequenceFolder(seqFolder[i], nFrames, false);
+            
+            if(seqFolder[i].size() > 0)
+                XML.setValue("SEQ_" + ofToString(i), seqFolder[i]);
+            else {
+                seqFolder[i] = oldSequenceFolder;
+                nFrames = oldNFrames;
+            }
+        }
         if(nFrames > 0) XML.setValue("N_FRAMES", nFrames);
         XML.saveFile("xmlSettings.xml");
-        
     }
 
   
 public:
+    
+    bool bSeq, bAutoplay, bNewFrame;
+    int frame, nFrames;
+    bool bSaving = false;
+    
     void setup(){
         bSeq = false;
     
@@ -104,15 +116,13 @@ public:
         matrixFile= XML.getValue("MATRIX_FILE", "");
         path= XML.getValue("MATRIX_PATH", "");
         
-        seq0Folder = XML.getValue("SEQ_0", "");
-        seq1Folder = XML.getValue("SEQ_1", "");
-        nFrames = XML.getValue("N_FRAMES", 0);
+        for(int i = 0; i < K; i++)
+            seqFolder[i] = XML.getValue("SEQ_" + ofToString(i), "", 0);
         
+        nFrames = XML.getValue("N_FRAMES", 0);
         openMeshLabProject();
             
     }
-    void resetMatrixFile(){matrixFile = "";}
-    
        
     void openMeshLabProject(){
         if (!matrixFile.compare("")) return;
@@ -126,43 +136,62 @@ public:
         
         MLP.pushTag("MeshLabProject");
         MLP.pushTag("MeshGroup");
-        
-        k0File =  MLP.getAttribute("MLMesh", "filename", "", 0);
-        k1File = MLP.getAttribute("MLMesh", "filename", "", 1);
-        
-        string s0 = MLP.getValue("MLMesh:MLMatrix44", "", 0);
-        string s1 =  MLP.getValue("MLMesh:MLMatrix44", "", 1);
-        
-        if(s0.size() == 0 || s1.size() == 0){
-            cout << "Incorrect matrix file format " << endl;
-            return;
+        cout << " A " << endl;
+        for(int i = 0; i < K; i++){
+            kFile[i] =  MLP.getAttribute("MLMesh", "filename", "", i);
+            cout << kFile[i] << endl;
+            string s = MLP.getValue("MLMesh:MLMatrix44", "", i);
+            if(s.size() == 0 ){
+                cout << "Incorrect matrix file format " << endl;
+                return;
+            }
+            M[i] = parseMatrix(s);
+            
+            cout << "Loading matrix... " <<  MLP.getAttribute("MLMesh","label","", i)
+            << "\n" << M[i] << endl;
         }
+       
+        for(int i = 0; i < K; i++)
+            kinect[i].load(path + kFile[i], M[i]);
         
-        M0 = parseMatrix(s0);
-        M1 = parseMatrix(s1);
-        
-        cout << "Loading matrix... " <<  MLP.getAttribute("MLMesh","label","", 0)
-        << "\n" << M0 << endl;
-        cout << "Loading matrix... " << MLP.getAttribute("MLMesh","label","", 1)
-        << "\n" << M1 << endl;
-        
-     //   ofxObjLoader::loadWithMatrix(path + k0File, calib0, false, M0);
-     //   ofxObjLoader::loadWithMatrix(path + k1File, calib1, false, M1);
-        
-        kinect0.load(path + k0File, M0);
-        kinect1.load(path + k1File, M1);
     }
     
     void update(){
         if(bSeq){
             if(bNewFrame){
-                string fileName = seq0Folder;
-                fileName.append(ofToString(frame)).append(".obj");
-                kinect0.load(fileName, M0);
+                for(int i = 0; i < K; i++){
+                    string fileName = seqFolder[i];
+                    fileName.append(ofToString(frame)).append(".ply");
+                    kinect[i].load(fileName, M[i]);
+                }
+                if(bSaving){
+                    string fileName = seqFolder[0];
+                    fileName += "merged_";
+                    fileName.append(ofToString(frame)).append(".ply");
+                    cout << "Saving " << fileName << endl;
+                    int  n = 0;
+                    for(int i = 0; i < K; i++)
+                        n += kinect[i].getNumVertices();
+                    
+                    cout << "Saving " << n << " vertices" << endl;
+                    
+                    ofstream *f = new ofstream(fileName.c_str());
+                    *f << "ply" << endl;
+                    *f << "format ascii 1.0" << endl;
+                    *f << "comment : created from Kinect merger" << endl;
+                    *f << "element vertex " << n << endl;
+                    *f << "property float x" << endl;
+                    *f << "property float y" << endl;
+                    *f << "property float z" << endl;
+                    *f << "end_header" << endl;
+
+                    for(int i = 0; i < K; i++)
+                        kinect[i].saveVertices(f);
+                    
+                    f->close();
+                    delete f;
+                }
             
-                fileName = seq1Folder;
-                fileName.append(ofToString(frame)).append(".obj");
-                kinect1.load(fileName, M1);
             }
             bNewFrame = false;
             if(bAutoplay){
@@ -172,76 +201,87 @@ public:
         }
     }
     void draw(){
+        
+        for(int i = 0; i < K; i++){
             ofPushStyle();
-            ofSetHexColor(0xE0D0AA);
-            kinect0.draw();
-            ofSetHexColor(0x8DA893);
-            kinect1.draw();
+            switch(i){
+                case 0:
+                    ofSetHexColor(0xE0D0AA);
+                    break;
+                case 1:
+                    ofSetHexColor(0x8DA893);
+                    break;
+                case 2:
+                    ofSetHexColor(0x1DA813);
+                    break;
+                case 3:
+                    ofSetHexColor(0x0DFF192);
+                    break;
+                default:
+                    ofSetHexColor(0xFFFFFF);
+                    break;
+                    
+                    
+            }
+            
+            kinect[i].draw();
             ofPopStyle();
+        }
         
     }
-    ofVec3f getCentroid(){
-        return kinect0.getCentroid();
+   
+
+    void nextFrame(){
+        frame = (frame + 1) % nFrames;
+        bNewFrame = true;
     }
-    void stop(){
-    
-    }
-    void continousKeyPress(bool keys[255]){
-        if(keys['a']){
-            frame = (frame + 1) % nFrames;
-            bNewFrame = true;
-        }
-        if(keys['z']){
-            frame = (frame + nFrames - 1) % nFrames;
-            bNewFrame = true;
-        }
+    void prevFrame(){
+        frame = (frame + nFrames - 1) % nFrames;
+        bNewFrame = true;
         
     }
     void swapMatrix(){
         ofMatrix4x4 aux;
-        aux = M0;
-        M0 = M1;
-        M1 = aux;
+        aux = M[0];
+        M[0] = M[1];
+        M[1] = aux;
         bNewFrame = true;
         
         cout << "SWAP MATRIX" << endl;
-        cout << "M0: \n" << M0 << endl;
-        cout << "M1: \n" << M1 << endl;
+        cout << "M0: \n" << M[0] << endl;
+        cout << "M1: \n" << M[1] << endl;
         
     }
-    void keyPressed(int key){
-        switch (key ) {
-            case 'm':
-                getMatrixFile();
-                openMeshLabProject();
-                break;
-            case 'l':
-                seq0Folder = "";
-                seq1Folder = "";
-                openSequenceFiles();
-                break;
-            case 'p':
-                bSeq = !bSeq;
-                frame = 0;
-                break;
-            case 'r':
-                bAutoplay = !bAutoplay;
-                break;
-            case 'w':
-                swapMatrix();
-                break;
-        
-            default:
-                break;
-        }
+    
+    void openSequenceFolders(){
+        openSequenceFiles();
+    }
+    void openMLP(){
+        getMatrixFile();
+        openMeshLabProject();
+    }
+    void toggleSimulation(){
+        bSeq = !bSeq;
+        frame = 0;
+        bNewFrame = true;
         
     }
+    
+    void toogleSwapMatrix(){
+        swapMatrix();
+    }
+ 
     void getStatus(char *str){
+        string folders = "";
+        for(int i = 0; i < K; i++){
+            folders += seqFolder[i].c_str();
+            folders += "\n";
+        }
         if(!bSeq)
-            sprintf(str, "CALIBRATE:\nMatrix: %s\n seq 0: %s\n seq 1: %s\n[m] to load meshlib file\n[l] to load sequence folders\n\n[p] to play sequence", matrixFile.c_str(), seq0Folder.c_str(), seq1Folder.c_str());
-        else
-            sprintf(str, "PLAYER SEQUENCE:\nMatrix: %s\n seq 0: %s\n seq 1: %s\n[a] next frame [z] prev frame\n[r] autoplay\nframe %d nFrames %d\n[w] swap matrices [p] stop sequence", matrixFile.c_str(), seq0Folder.c_str(), seq1Folder.c_str(), frame, nFrames);
-            
+            sprintf(str, "MESHLAB VIEW:\nMatrix: %s\n%s", matrixFile.c_str(), folders.c_str());
+        else{
+            sprintf(str, "SIMULATION:\nMatrix: %s\n%s\nframe %d N frames %d", matrixFile.c_str(), folders.c_str(), frame, nFrames);
+        }
     }
     
 };
