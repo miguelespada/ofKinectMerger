@@ -44,20 +44,18 @@ void testApp::setup(){
     mode->setup();
     gui.setup();
 	gui.addTitle("KINECT MERGER \n[i] hide controls");
+    status = &gui.addTitle("STATUS");
+    gui.addButton("Load MeshLab File", bLoadMLP);
+    gui.addButton("Load PLY sequences", bLoadSeq);
+    gui.addButton("Simulation/MeshLab", bSimulation);
     gui.addSlider("Zoom", camZoom, -5000, 5000).setSmoothing(0.9);
     gui.addSlider("camPosX", camPosX, -200, 200).setSmoothing(0.9);;
     gui.addSlider("camPosY", camPosY, -200, 200).setSmoothing(0.9);;
     gui.addSlider("camRotX", camRotX, 0, 360).setSmoothing(0.9);;
     gui.addSlider("camRotY", camRotY, 0, 360).setSmoothing(0.9);;
-
-    status = &gui.addTitle("STATUS");
-    gui.addTitle("CONTROLS").setNewColumn(true);
-    gui.addButton("Load MeshLab File", bLoadMLP);
-    gui.addButton("Load PLY sequences", bLoadSeq);
+    gui.addToggle("Merge", mode->bSaving);
     gui.addButton("Swap matrix", bSwap);
-    gui.addButton("Simulation/MeshLab", bSimulation);
-    gui.addToggle   ("Auto merge", mode->bSaving);
-    gui.addToggle("Auto play", mode->bAutoplay);
+    gui.addToggle("Play", mode->bAutoplay);
     gui.addButton("Next Frame", bNext);
     gui.addButton("Prev Frame", bPrev);
     
@@ -71,7 +69,7 @@ void testApp::update(){
 
     mode->getStatus(msg);
     status->setName(msg);
-    status->setSize(400, 200);
+    status->setSize(300, 100);
     mode->update();
     if(bLoadMLP){
         bLoadMLP = false;
@@ -80,10 +78,6 @@ void testApp::update(){
     if(bLoadSeq){
         bLoadSeq = false;
         mode->openSequenceFolders();
-    }
-    if(bSimulation){
-        bSimulation = false;
-        mode->toggleSimulation();
     }
     if(bSwap){
         bSwap = false;
@@ -102,9 +96,9 @@ void testApp::update(){
 
 //--------------------------------------------------------------
 void testApp::draw(){
-    centroid = ofVec3f(0, 0, 0);
+    centroid = ofVec3f(0, 0, 4000);
     
-	cam.setPosition(centroid + ofVec3f(0, 0,-2000));
+	cam.setPosition(ofVec3f(0, 0,-2000));
     cam.lookAt(centroid, ofVec3f(0,1,0));
     cam.setFarClip(50000);
     

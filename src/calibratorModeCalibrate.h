@@ -24,7 +24,7 @@ class calibratorModeCalibrate  {
     string kFile[K];
     string seqFolder[K];
     string matrixFile, path;
-    
+    string savingMsg;
     
     ofMatrix4x4 parseMatrix(string s){
         std::vector<float> v;
@@ -89,6 +89,7 @@ class calibratorModeCalibrate  {
             else {
                 seqFolder[i] = oldSequenceFolder;
                 nFrames = oldNFrames;
+                return;
             }
         }
         if(nFrames > 0) XML.setValue("N_FRAMES", nFrames);
@@ -150,13 +151,19 @@ public:
             cout << "Loading matrix... " <<  MLP.getAttribute("MLMesh","label","", i)
             << "\n" << M[i] << endl;
         }
-       
-        for(int i = 0; i < K; i++)
-            kinect[i].load(path + kFile[i], M[i]);
         
+        if(!bSeq){
+            for(int i = 0; i < K; i++)
+                kinect[i].load(path + kFile[i], M[i]);
+        }
+        else{
+            bNewFrame = true;
+        }
     }
     
     void update(){
+        savingMsg = "";
+        if(bAutoplay && !bSeq) bSeq = true;
         if(bSeq){
             if(bNewFrame){
                 for(int i = 0; i < K; i++){
@@ -165,16 +172,24 @@ public:
                     kinect[i].load(fileName, M[i]);
                 }
                 if(bSaving){
+                    
                     string fileName = seqFolder[0];
                     fileName += "merged_";
                     fileName.append(ofToString(frame)).append(".ply");
+                    
+                    ifstream ifile(fileName.c_str());
+                    if (ifile){
+                        savingMsg = "File exists, do not overwrite";
+                    }
+                    else{
+                    
                     cout << "Saving " << fileName << endl;
+                    savingMsg = "Saving " + fileName;
                     int  n = 0;
                     for(int i = 0; i < K; i++)
                         n += kinect[i].getNumVertices();
-                    
                     cout << "Saving " << n << " vertices" << endl;
-                    
+                        
                     ofstream *f = new ofstream(fileName.c_str());
                     *f << "ply" << endl;
                     *f << "format ascii 1.0" << endl;
@@ -190,6 +205,7 @@ public:
                     
                     f->close();
                     delete f;
+                    }
                 }
             
             }
@@ -280,7 +296,7 @@ public:
         if(!bSeq)
             sprintf(str, "MESHLAB VIEW:\nMatrix: %s\n%s", matrixFile.c_str(), folders.c_str());
         else{
-            sprintf(str, "SIMULATION:\nMatrix: %s\n%s\nframe %d N frames %d", matrixFile.c_str(), folders.c_str(), frame, nFrames);
+            sprintf(str, "SIMULATION:\nMatrix: %s\n%s\nframe %d N frames %d\n%s", matrixFile.c_str(), folders.c_str(), frame, nFrames, savingMsg.c_str());
         }
     }
     
