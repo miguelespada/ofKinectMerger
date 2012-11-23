@@ -69,7 +69,7 @@ class calibratorModeCalibrate  {
         int pos = root.find_last_of('_');
         root.erase(pos + 1, root.size() - pos);
         folder = root;
-        if(bGetNFrames){
+        if(bGetNFrames){ //This is not working, should look for the higher number
             ofDirectory dir(seqPath );
             dir.allowExt("ply");
             dir.listDir();
